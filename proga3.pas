@@ -17,6 +17,11 @@ begin
   f := 2*x*x*x + 2*x*x + 7;
 end;
 
+function F(x: real): real;
+begin
+  F := (1/2)*x*x*x*x+(2/3)*x*x*x+7*x;
+end;
+
 // вычисление интеграла методом средних прямоугольников
 function calculate_integral(a, b: real; n: integer): real;
 var
@@ -41,17 +46,13 @@ var
   h: real;
   x: real;
 begin
-  if abs(12*a + 4) > abs(12*b + 4) then
-    max_f2 := abs(12*a + 4)  // макс в точке a
-  else
-    max_f2 := abs(12*b + 4); // макс в точке b
+
+ real_integral = abs(F(b)-F(a));
   
-  // нужная формула - 
-  // |R| <= M2 * (b - a)^3 / (24 * n^2)
-  // где M2 = max|f''(x)| на [a,b]
-  
-  h := (b - a) / n;
-  estimate_error := max_f2 * sqr(b - a) * h / 24;
+  estimate_error := calculate_integral(a,b)-real_integral;
+  relative_error := abs(estimate_error/real_integral) * 100;
+  writeln('абсолютная погрешность: ', estimate_error:0:6);
+  writeln('относительная погрешность: ', relative_error:0:6);
 end;
 
 // ввод одного предела (a или b)
@@ -83,7 +84,7 @@ end;
 // Вычисление интеграла и погрешности (если возможно)
 function can_compute: boolean;
 begin
-  can_compute := (n > 0) and (a <= b);
+  can_compute := (n > 0) and (a <= b) and (calculate_integral(a, b, n) <> 0);
 end;
 
 // Процедура отрисовки меню
@@ -131,7 +132,6 @@ begin
   b := 0.0;
   n := 0;
   choice := 1;
-  exitFlag := false;
 
   repeat
     menu;
@@ -178,21 +178,19 @@ begin
                   writeln('ошибка, невозможно оценить погрешность.');
                   if n <= 0 then writeln('n должно быть > 0');
                   if a > b then writeln('обязательно a <= b');
+                    else writeln('введите а и b')
                 end
                 else
                 begin
-                  error_value := estimate_error(a, b, n);
-                  writeln('оценка погрешности: +-', error_value:0:6);
+                    estimate_error(a, b, n);
                 end;
                 writeln('нажмите любую клавишу для продолжения...');
                 ReadKey;
               end;
-            6: exitFlag := True;
+            6: exit;
           end;
         end;
     end;
-
-  until exitFlag;
 
   ClrScr;
   writeln('программа завершена');

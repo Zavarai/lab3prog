@@ -8,7 +8,6 @@ var
   n: integer;
   choice: integer;
   exitFlag: boolean;
-  result_computed: boolean;
   integral_value, error_value: real;
 
 // функция заданная в условии
@@ -17,9 +16,10 @@ begin
   f := 2*x*x*x + 2*x*x + 7;
 end;
 
-function F(x: real): real;
+// первообразная для точного вычисления
+function F_antiderivative(x: real): real;
 begin
-  F := (1/2)*x*x*x*x+(2/3)*x*x*x+7*x;
+  F_antiderivative := (1/2)*x*x*x*x + (2/3)*x*x*x + 7*x;
 end;
 
 // вычисление интеграла методом средних прямоугольников
@@ -38,30 +38,55 @@ begin
   calculate_integral := h * sum;
 end;
 
-// оценка погрешности метода средних прямоугольников
+// оценка погрешности (сравнение с точным значением через первообразную)
 function estimate_error(a, b: real; n: integer): real;
 var
-  // макс значение 2 производной на [a,b]
-  max_f2: real;
-  h: real;
-  x: real;
+  real_integral, approx_integral: real;
 begin
-
- real_integral = abs(F(b)-F(a));
+  // точное значение интеграла через первообразную
+  real_integral := F_antiderivative(b) - F_antiderivative(a);
   
-  estimate_error := calculate_integral(a,b)-real_integral;
-  relative_error := abs(estimate_error/real_integral) * 100;
-  writeln('абсолютная погрешность: ', estimate_error:0:6);
-  writeln('относительная погрешность: ', relative_error:0:6);
+  // приближенное значение
+  approx_integral := calculate_integral(a, b, n);
+  
+  // абсолютная погрешность
+  estimate_error := abs(approx_integral - real_integral);
+end;
+
+// функция для отображения погрешности с относительной погрешностью
+procedure display_error(a, b: real; n: integer);
+var
+  real_integral, approx_integral: real;
+  absolute_error, relative_error: real;
+begin
+  // точное значение интеграла через первообразную
+  real_integral := F_antiderivative(b) - F_antiderivative(a);
+  
+  // приближенное значение
+  approx_integral := calculate_integral(a, b, n);
+  
+  // абсолютная погрешность
+  absolute_error := abs(approx_integral - real_integral);
+  
+  // относительная погрешность (в %)
+  if real_integral <> 0 then
+    relative_error := (absolute_error / abs(real_integral)) * 100
+  else
+    relative_error := 0;
+  
+  writeln('Точное значение интеграла: ', real_integral:0:6);
+  writeln('Приближенное значение: ', approx_integral:0:6);
+  writeln('Абсолютная погрешность: ', absolute_error:0:6);
+  writeln('Относительная погрешность: ', relative_error:0:6, ' %');
 end;
 
 // ввод одного предела (a или b)
-procedure input_a_or_b(var name: real; a_or_b: string);
+procedure input_a_or_b(var value: real; name: string);
 begin
   ClrScr;
-  write('Введите ', a_or_b, ': ');
-  readln(name);
-  writeln('Значение ', a_or_b, ' = ', name:0:6);
+  write('Введите ', name, ': ');
+  readln(value);
+  writeln('Значение ', name, ' = ', value:0:6);
   writeln('Нажмите любую клавишу для продолжения...');
   ReadKey;
 end;
@@ -81,10 +106,10 @@ begin
   ReadKey;
 end;
 
-// Вычисление интеграла и погрешности (если возможно)
+// Проверка возможности вычисления
 function can_compute: boolean;
 begin
-  can_compute := (n > 0) and (a <= b) and (calculate_integral(a, b, n) <> 0);
+  can_compute := (n > 0) and (a < b);
 end;
 
 // Процедура отрисовки меню
@@ -119,8 +144,8 @@ begin
   writeln('  a = ', a:0:6);
   writeln('  b = ', b:0:6);
   writeln('  n = ', n);
-  if a > b then writeln('обязательно a > b');
-  if n <= 0 then writeln('n не задано корректно');
+  if a >= b then writeln('ВАЖНО: a должно быть < b');
+  if n <= 0 then writeln('ВАЖНО: n должно быть > 0');
   writeln;
   writeln('Используйте W/S для навигации, Enter — выбор');
 end;
@@ -132,6 +157,7 @@ begin
   b := 0.0;
   n := 0;
   choice := 1;
+  exitFlag := false;
 
   repeat
     menu;
@@ -158,16 +184,18 @@ begin
                 ClrScr;
                 if not can_compute then
                 begin
-                  writeln('ошибка: невозможно вычислить интеграл.');
-                  if n <= 0 then writeln('n должно быть > 0');
-                  if a > b then writeln('обязательно a <= b');
+                  writeln('Ошибка: невозможно вычислить интеграл.');
+                  if n <= 0 then 
+                    writeln('Причина: n должно быть > 0');
+                  if a >= b then 
+                    writeln('Причина: a должно быть < b');
                 end
                 else
                 begin
                   integral_value := calculate_integral(a, b, n);
-                  writeln('значение интеграла: ', integral_value:0:6);
+                  writeln('Приближенное значение интеграла: ', integral_value:0:6);
                 end;
-                writeln('нажмите любую клавишу для продолжения...');
+                writeln('Нажмите любую клавишу для продолжения...');
                 ReadKey;
               end;
             5:
@@ -175,25 +203,28 @@ begin
                 ClrScr;
                 if not can_compute then
                 begin
-                  writeln('ошибка, невозможно оценить погрешность.');
-                  if n <= 0 then writeln('n должно быть > 0');
-                  if a > b then writeln('обязательно a <= b');
-                    else writeln('введите а и b')
+                  writeln('Ошибка: невозможно оценить погрешность.');
+                  if n <= 0 then 
+                    writeln('Причина: n должно быть > 0');
+                  if a >= b then 
+                    writeln('Причина: a должно быть < b');
                 end
                 else
                 begin
-                    estimate_error(a, b, n);
+                  display_error(a, b, n);
                 end;
-                writeln('нажмите любую клавишу для продолжения...');
+                writeln('Нажмите любую клавишу для продолжения...');
                 ReadKey;
               end;
-            6: exit;
+            6: exitFlag := true;
           end;
         end;
     end;
 
+  until exitFlag;
+
   ClrScr;
-  writeln('программа завершена');
-  writeln('нажмите любую клавишу для выхода...');
+  writeln('Программа завершена');
+  writeln('Нажмите любую клавишу для выхода...');
   ReadKey;
 end.
